@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CONVERSOR | SPED ECD - LANÇAMENTOS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(to right, #3d72b4, #525252);
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --glass-blur: blur(12px);
+            --text-color: #ffffff;
+            --accent-color: #007AFF;
+            --card-radius: 12px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 13px;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            background-attachment: fixed;
+            min-height: 100vh;
+            color: var(--text-color);
+            padding: 20px;
+            padding-bottom: 100px;
+            transition: background 0.5s ease;
+        }
+
+        h1, h2, h3, p, span, label, td, th {
+            text-shadow: 0 0 1px rgba(255,255,255,0.1), 0 0 2px rgba(0,0,0,0.1);
+        }
+
+        .header-box {
+            background: var(--glass-bg);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--card-radius);
+            padding: 15px 25px;
+            text-align: center;
+            margin-bottom: 30px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-box h1 {
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .card {
+            background: var(--glass-bg);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--card-radius);
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .card-header {
+            padding: 12px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .card-header:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .card-title {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-out, padding 0.5s ease;
+            padding: 0 20px;
+        }
+
+        .card.active .card-content {
+            max-height: 2000px;
+            padding: 20px;
+        }
+
+        .card-icon {
+            transition: transform 0.3s ease;
+        }
+
+        .card.active .card-icon {
+            transform: rotate(180deg);
+        }
+
+        .dock-container {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 8px 15px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+        }
+
+        .dock-item {
+            width: 45px;
+            height: 45px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+
+        .dock-item:hover {
+            transform: translateY(-10px) scale(1.2);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .dock-item svg {
+            width: 24px;
+            height: 24px;
+            fill: white;
+        }
+
+        .dock-tooltip {
+            position: absolute;
+            bottom: 60px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        .dock-item:hover .dock-tooltip {
+            opacity: 1;
+        }
+
+        .skin-popover {
+            position: absolute;
+            bottom: 70px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 10px;
+            display: none;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .skin-option {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: border 0.2s;
+        }
+
+        .skin-option:hover {
+            border-color: white;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin-top: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            font-weight: 600;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        td {
+            padding: 8px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        input[type="text"], select {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            padding: 5px 8px;
+            color: white;
+            outline: none;
+            width: 100%;
+        }
+
+        input[type="text"]:focus {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: var(--accent-color);
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 8px 16px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            border-color: rgba(255,255,255,0.2);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .modal {
+            background: rgba(40, 40, 40, 0.8);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            animation: modalIn 0.3s ease-out;
+        }
+
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .modal-header {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .modal-body {
+            margin-bottom: 25px;
+            line-height: 1.6;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .hidden { display: none; }
+        
+        .status-badge {
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .status-pending { background: rgba(255, 153, 0, 0.2); color: #FF9900; }
+        .status-success { background: rgba(0, 200, 83, 0.2); color: #00C853; }
+
+        .bulk-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px;
+            border-radius: 10px;
+        }
+
+        .checkbox-custom {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--accent-color);
+        }
+
+        /* Paginação */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .page-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--glass-border);
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .page-btn:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        .page-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .page-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: white;
+        }
+
+        .page-info {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        /* Lista de Validação */
+        .validation-list {
+            list-style: none;
+        }
+
+        .validation-item {
+            padding: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .validation-item:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .validation-item strong {
+            color: var(--accent-color);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-box">
+        <h1>CONVERSOR | SPED ECD - LANÇAMENTOS</h1>
+    </div>
+
+    <div class="container">
+        <div class="card" id="card-dados">
+            <div class="card-header" onclick="toggleCard('card-dados')">
+                <div class="card-title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    DADOS IMPORTADOS
+                </div>
+                <div class="card-icon">▼</div>
+            </div>
+            <div class="card-content">
+                <div id="import-info" style="margin-bottom: 15px; opacity: 0.8;">
+                    Nenhum arquivo importado.
+                </div>
+                
+                <div class="bulk-actions">
+                    <input type="text" id="bulk-code" placeholder="Código Domínio" style="width: 120px;">
+                    <button class="btn" onclick="applyBulk('all')">Todas</button>
+                    <button class="btn" onclick="applyBulk('empty')">Vazias</button>
+                    <button class="btn" onclick="applyBulk('selected')">Selecionadas</button>
+                    <div style="flex-grow: 1;"></div>
+                    <button class="btn" onclick="triggerExcelImport()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        Importar Excel
+                    </button>
+                    <button class="btn" onclick="downloadDataset()" style="background: rgba(0, 122, 255, 0.2);">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        DOWNLOAD CONJUNTO DE DADOS
+                    </button>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 30px;"><input type="checkbox" class="checkbox-custom" onchange="toggleSelectAll(this)"></th>
+                                <th>Código SPED</th>
+                                <th>Nome da Conta</th>
+                                <th>Tipo</th>
+                                <th>Código Domínio</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="accounts-table-body"></tbody>
+                    </table>
+                </div>
+
+                <div class="pagination">
+                    <button class="page-btn" id="prev-page" onclick="changePage(-1)">
+                        <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+                    </button>
+                    <span class="page-info" id="page-info">Página 1 de 1</span>
+                    <button class="page-btn" id="next-page" onclick="changePage(1)">
+                        <svg viewBox="0 0 24 24"><path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="dock-container">
+        <div class="dock-item" onclick="triggerSpedImport()">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+            <div class="dock-tooltip">Importar ECD</div>
+        </div>
+        
+        <div class="dock-item" onclick="validateAccounts()">
+            <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            <div class="dock-tooltip">Validar Contas</div>
+        </div>
+
+        <div class="dock-item" onclick="generateOutput()">
+            <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            <div class="dock-tooltip">Gerar TXT</div>
+        </div>
+
+        <div class="dock-item" onclick="showModal('modal-balance')">
+            <svg viewBox="0 0 24 24"><path d="M11.5 2L2 6.5v11L11.5 22 21 17.5v-11L11.5 2zm0 2.36l7.11 3.39-7.11 3.39-7.11-3.39 7.11-3.39zM4 16.15V8.45l7 3.33v7.7l-7-3.33zm9 3.33v-7.7l7-3.33v7.7l-7 3.33z"/></svg>
+            <div class="dock-tooltip">Balanço Abertura</div>
+        </div>
+
+        <div class="dock-item" onclick="downloadDataset()">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V9h2v7zm4 0h-2V9h2v7z"/></svg>
+            <div class="dock-tooltip">Download Conjunto</div>
+        </div>
+
+        <div style="width: 1px; height: 30px; background: rgba(255,255,255,0.2); margin: 0 5px;"></div>
+
+        <div class="dock-item" onclick="toggleSkinPopover()">
+            <svg viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9s1.5.67 1.5 1.5S7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5S18.33 12 17.5 12z"/></svg>
+            <div class="dock-tooltip">Mudar Skin</div>
+            <div class="skin-popover" id="skin-popover">
+                <div class="skin-option" style="background: linear-gradient(to right, #3d72b4, #525252);" onclick="setSkin(0)"></div>
+                <div class="skin-option" style="background: linear-gradient(to right, #19547b, #ffd89b);" onclick="setSkin(1)"></div>
+                <div class="skin-option" style="background: linear-gradient(to right, #99f2c8, #1f4037);" onclick="setSkin(2)"></div>
+                <div class="skin-option" style="background: linear-gradient(to right, #FD746C, #2C3E50);" onclick="setSkin(3)"></div>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="input-sped" class="hidden" accept=".txt" onchange="handleSpedFile(event)">
+    <input type="file" id="input-excel" class="hidden" accept=".xlsx, .xls" onchange="handleExcelFile(event)">
+
+    <!-- Modals -->
+    <div class="modal-overlay" id="modal-import">
+        <div class="modal">
+            <div class="modal-header"><div class="modal-title">Importar SPED ECD</div></div>
+            <div class="modal-body">
+                <p>Bem-vindo ao Conversor!</p>
+                <p>Nesta etapa, você deve importar o arquivo original do SPED ECD (.txt).</p>
+                <p>O sistema irá extrair o plano de contas e as movimentações. Na próxima etapa, você poderá realizar o <strong>de-para</strong> para os códigos do sistema Domínio.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="triggerSpedImport(); closeModal('modal-import');">Selecionar Arquivo</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-validation">
+        <div class="modal">
+            <div class="modal-header"><div class="modal-title">Contas Pendentes</div></div>
+            <div class="modal-body">
+                <p>As seguintes contas não possuem código Domínio. Clique duas vezes em uma conta para editá-la.</p>
+                <ul class="validation-list" id="validation-list"></ul>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal('modal-validation')">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-balance">
+        <div class="modal">
+            <div class="modal-header"><div class="modal-title">Balanço de Abertura</div></div>
+            <div class="modal-body">
+                <p>Informe a data para o balanço de abertura:</p>
+                <input type="text" id="balance-date" placeholder="DD/MM/AAAA" maxlength="10" oninput="formatDate(this)">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="generateBalance()">Gerar Balanço</button>
+                <button class="btn" onclick="closeModal('modal-balance')">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-excel">
+        <div class="modal">
+            <div class="modal-header"><div class="modal-title">Mapeamento via Excel</div></div>
+            <div class="modal-body">
+                <p>Selecione a coluna que contém os <strong>Códigos Domínio</strong>:</p>
+                <select id="excel-column-select"></select>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="confirmExcelMapping()">Confirmar Mapeamento</button>
+                <button class="btn" onclick="closeModal('modal-excel')">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-balance-info">
+        <div class="modal">
+            <div class="modal-header"><div class="modal-title">⚠️ Instruções de Importação</div></div>
+            <div class="modal-body">
+                <p>O arquivo de <strong>Balanço de Abertura</strong> foi gerado com sucesso!</p>
+                <p style="margin-top: 15px; background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; border: 1px solid var(--glass-border);">
+                    Para importar este arquivo no sistema <strong>Domínio</strong>, utilize a opção:<br><br>
+                    <strong>"Leiaute Domínio Sistemas com Separador"</strong>
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="closeModal('modal-balance-info')">Entendido</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let rawSpedLines = [];
+        let accounts = [];
+        let balanceData = [];
+        let excelData = [];
+        let currentPage = 1;
+        const rowsPerPage = 10;
+        let skins = [
+            "linear-gradient(to right, #3d72b4, #525252)",
+            "linear-gradient(to right, #19547b, #ffd89b)",
+            "linear-gradient(to right, #99f2c8, #1f4037)",
+            "linear-gradient(to right, #FD746C, #2C3E50)"
+        ];
+
+        window.onload = () => showModal('modal-import');
+
+        function toggleCard(id) { document.getElementById(id).classList.toggle('active'); }
+        function showModal(id) { document.getElementById(id).style.display = 'flex'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function toggleSkinPopover() {
+            const p = document.getElementById('skin-popover');
+            p.style.display = p.style.display === 'grid' ? 'none' : 'grid';
+        }
+        function setSkin(i) {
+            document.documentElement.style.setProperty('--bg-gradient', skins[i]);
+            toggleSkinPopover();
+        }
+        function triggerSpedImport() { document.getElementById('input-sped').click(); }
+        function triggerExcelImport() {
+            if (accounts.length === 0) return alert('Importe o SPED primeiro!');
+            document.getElementById('input-excel').click();
+        }
+
+        function handleSpedFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                rawSpedLines = e.target.result.split('\n');
+                processSped(rawSpedLines);
+                document.getElementById('card-dados').classList.add('active');
+            };
+            reader.readAsText(file, 'latin1');
+        }
+
+        function processSped(lines) {
+            const tempAccounts = new Map();
+            const movedAccounts = new Set();
+            balanceData = [];
+
+            lines.forEach(line => {
+                const f = line.split('|');
+                const type = f[1];
+                if (type === 'I050' && f[4] === 'A') {
+                    tempAccounts.set(f[6], { codigo: f[6], nome: f[8] || f[7], tipo: f[4], codNat: f[3], nivel: f[5], codigoDominio: '' });
+                }
+                if (type === 'I250') movedAccounts.add(f[2]);
+                if (type === 'I155') {
+                    const existing = balanceData.find(b => b.codigo === f[2]);
+                    if (!existing) balanceData.push({ codigo: f[2], vlrSaldo: f[4], tipo: f[5] });
+                }
+            });
+
+            accounts = Array.from(movedAccounts).map(cod => tempAccounts.get(cod)).filter(acc => acc !== undefined);
+            currentPage = 1;
+            renderTable();
+            document.getElementById('import-info').innerHTML = `<strong>${accounts.length}</strong> contas analíticas com movimentação encontradas.`;
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('accounts-table-body');
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+            const pageItems = accounts.slice(start, end);
+
+            tbody.innerHTML = pageItems.map((acc, i) => {
+                const realIndex = start + i;
+                return `
+                <tr ondblclick="focusInput(${realIndex})">
+                    <td><input type="checkbox" class="checkbox-custom row-check" data-index="${realIndex}"></td>
+                    <td>${acc.codigo}</td>
+                    <td>${acc.nome}</td>
+                    <td>${acc.tipo}</td>
+                    <td>
+                        <input type="text" id="input-acc-${realIndex}" value="${acc.codigoDominio}" 
+                               onchange="updateAccountCode(${realIndex}, this.value)" 
+                               placeholder="Cód. Domínio">
+                    </td>
+                    <td>
+                        <span class="status-badge ${acc.codigoDominio ? 'status-success' : 'status-pending'}">
+                            ${acc.codigoDominio ? 'OK' : 'Pendente'}
+                        </span>
+                    </td>
+                </tr>
+            `}).join('');
+
+            const totalPages = Math.ceil(accounts.length / rowsPerPage) || 1;
+            document.getElementById('page-info').textContent = `Página ${currentPage} de ${totalPages}`;
+            document.getElementById('prev-page').disabled = currentPage === 1;
+            document.getElementById('next-page').disabled = currentPage === totalPages;
+        }
+
+        function changePage(dir) {
+            currentPage += dir;
+            renderTable();
+        }
+
+        function focusInput(index) {
+            const input = document.getElementById(`input-acc-${index}`);
+            if (input) {
+                input.focus();
+                input.select();
+            }
+        }
+
+        function updateAccountCode(index, value) {
+            accounts[index].codigoDominio = value;
+            renderTable();
+        }
+
+        function toggleSelectAll(master) {
+            document.querySelectorAll('.row-check').forEach(cb => cb.checked = master.checked);
+        }
+
+        function applyBulk(mode) {
+            const code = document.getElementById('bulk-code').value;
+            if (!code) return;
+            accounts.forEach((acc, i) => {
+                const cb = document.querySelector(`.row-check[data-index="${i}"]`);
+                if (mode === 'all' || (mode === 'empty' && !acc.codigoDominio) || (mode === 'selected' && cb && cb.checked)) {
+                    acc.codigoDominio = code;
+                }
+            });
+            renderTable();
+        }
+
+        function validateAccounts() {
+            const missing = accounts.filter((acc, i) => !acc.codigoDominio).map(acc => ({ ...acc, originalIndex: accounts.indexOf(acc) }));
+            if (missing.length === 0) return alert('Todas as contas estão mapeadas!');
+            
+            const list = document.getElementById('validation-list');
+            list.innerHTML = missing.map(m => `
+                <li class="validation-item" ondblclick="goToAccount(${m.originalIndex})">
+                    <strong>${m.codigo}</strong> - ${m.nome}
+                </li>
+            `).join('');
+            showModal('modal-validation');
+        }
+
+        function goToAccount(index) {
+            currentPage = Math.floor(index / rowsPerPage) + 1;
+            closeModal('modal-validation');
+            renderTable();
+            setTimeout(() => focusInput(index), 100);
+        }
+
+        function handleExcelFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                excelData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                if (excelData.length > 0) {
+                    const cols = Object.keys(excelData[0]);
+                    document.getElementById('excel-column-select').innerHTML = cols.map(c => `<option value="${c}">${c}</option>`).join('');
+                    showModal('modal-excel');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function confirmExcelMapping() {
+            const col = document.getElementById('excel-column-select').value;
+            const nameCol = Object.keys(excelData[0]).find(k => k.toLowerCase().includes('nome') || k.toLowerCase().includes('conta'));
+            if (!nameCol) return alert('Coluna de nome não encontrada.');
+            
+            let count = 0;
+            accounts.forEach(acc => {
+                const match = excelData.find(row => {
+                    const en = String(row[nameCol] || '').toUpperCase();
+                    const an = String(acc.nome).toUpperCase();
+                    return en.includes(an) || an.includes(en);
+                });
+                if (match && match[col]) { acc.codigoDominio = String(match[col]); count++; }
+            });
+            alert(`${count} contas mapeadas!`);
+            renderTable();
+            closeModal('modal-excel');
+        }
+
+        function generateOutput() {
+            if (accounts.length === 0) return alert('Sem dados.');
+            const map = new Map(accounts.filter(a => a.codigoDominio).map(a => [a.codigo, a.codigoDominio]));
+            const out = rawSpedLines.map(line => {
+                const f = line.split('|');
+                if (f[1] === 'I250' && map.has(f[2])) f[2] = map.get(f[2]);
+                return f.join('|');
+            });
+            downloadFile(out.join('\n'), 'Importar Lançamentos Convertidos.txt');
+        }
+
+        function formatDate(input) {
+            let v = input.value.replace(/\D/g, '');
+            if (v.length > 2) v = v.substring(0,2) + '/' + v.substring(2);
+            if (v.length > 5) v = v.substring(0,5) + '/' + v.substring(5,9);
+            input.value = v;
+        }
+
+        function generateBalance() {
+            const date = document.getElementById('balance-date').value;
+            if (date.length < 10) return alert('Informe a data corretamente.');
+            
+            const map = new Map(accounts.filter(a => a.codigoDominio).map(a => [a.codigo.replace(/\D/g, ''), a.codigoDominio]));
+            const out = ['|6000|V||||'];
+            
+            balanceData.forEach(item => {
+                const codTrocar = item.codigo.replace(/\D/g, '');
+                if (map.has(codTrocar)) {
+                    const codDom = map.get(codTrocar);
+                    const vlr = item.vlrSaldo;
+                    if (item.tipo === 'D') out.push(`|6100|${date}|${codDom}||${vlr}||SALDO DE ABERTURA EM ${date}|||||`);
+                    else out.push(`|6100|${date}||${codDom}|${vlr}||SALDO DE ABERTURA EM ${date}|||||`);
+                }
+            });
+
+            downloadFile(out.join('\n'), `BALANCO_ABERTURA_${date.replace(/\//g,'')}.txt`);
+            closeModal('modal-balance');
+            
+            // Mostrar popup explicativo após o download
+            setTimeout(() => showModal('modal-balance-info'), 500);
+        }
+
+        function downloadDataset() {
+            const url = "https://raw.githubusercontent.com/iramalho1980/converte_lan-amentos_ECD/9862370bde0d259f0e79bbb507b072fc58f593ed/Conjunto%20SPED.xml";
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = "Conjunto SPED.xml";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        function downloadFile(content, name) {
+            const blob = new Blob([content], { type: 'text/plain;charset=windows-1252' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = name;
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a); window.URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
